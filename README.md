@@ -139,5 +139,3 @@ Zepto-SQL-data-analysis/
 ├── LICENSE
 ```
 
-## 📜 License
-MIT — feel free to fork, star, or reference for your own learning.
