@@ -44,18 +44,20 @@ Each row represents a product SKU. 3,732 rows across 14 categories.
 ### 1. Table Creation
 ```sql
 CREATE TABLE zepto (
-  sku_id SERIAL PRIMARY KEY,
+  sku_id INT AUTO_INCREMENT PRIMARY KEY,
   category VARCHAR(120),
   name VARCHAR(150) NOT NULL,
-  mrp NUMERIC(8,2),
-  discountPercent NUMERIC(5,2),
-  availableQuantity INTEGER,
-  discountedSellingPrice NUMERIC(8,2),
-  weightInGms INTEGER,
+  mrp DECIMAL(8,2),
+  discountPercent DECIMAL(5,2),
+  availableQuantity INT,
+  discountedSellingPrice DECIMAL(8,2),
+  weightInGms INT,
   outOfStock BOOLEAN,
-  quantity INTEGER
+  quantity INT
 );
 ```
+> Note: MySQL's `BOOLEAN` is an alias for `TINYINT(1)`, so `outOfStock` is
+> stored as `0`/`1` under the hood — this works transparently in queries.
 
 ### 2. 🔍 Data Exploration
 - Counted total records (3,732 rows)
@@ -124,8 +126,22 @@ cd Zepto-SQL-data-analysis
 ```
 1. Open `queries.sql` — contains table creation, data exploration, cleaning,
    and business analysis queries in order.
-2. Load `zepto_v2.csv` into a PostgreSQL database (via pgAdmin import or
-   `\copy`).
+2. Load `zepto_v2.csv` into a MySQL database. Options:
+   - **MySQL Workbench**: use the Table Data Import Wizard.
+   - **Command line**, after creating the `zepto` table:
+     ```sql
+     LOAD DATA LOCAL INFILE 'zepto_v2.csv'
+     INTO TABLE zepto
+     FIELDS TERMINATED BY ','
+     ENCLOSED BY '"'
+     LINES TERMINATED BY '\n'
+     IGNORE 1 ROWS
+     (category, name, mrp, discountPercent, availableQuantity,
+      discountedSellingPrice, weightInGms, outOfStock, quantity);
+     ```
+     If you hit a "local infile" error, enable it first:
+     `SET GLOBAL local_infile = 1;` (server-side) and connect with
+     `--local-infile=1` (client-side).
 3. Run `queries.sql` against the loaded table to reproduce the analysis.
 
 ## 📁 Project Structure
@@ -138,4 +154,3 @@ Zepto-SQL-data-analysis/
 ├── README.md
 ├── LICENSE
 ```
-
