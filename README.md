@@ -1,98 +1,143 @@
-# Zepto Inventory Analysis
+# 🛒 Zepto Inventory SQL Data Analysis Project
 
-## Overview
-SQL-driven analysis of Zepto's product inventory — cleaning the raw catalog,
-then answering pricing, discounting, and stock-availability questions across
-3,732 SKUs and 14 product categories using PostgreSQL.
+A SQL-based data analysis project exploring Zepto's product inventory — a
+real e-commerce/quick-commerce catalog dataset — from raw data cleaning
+through business-focused analysis.
 
-## Dataset
-[Zepto Inventory Dataset](https://www.kaggle.com/datasets/palvinder2006/zepto-inventory-dataset) (Kaggle)
+This project covers the full analyst workflow: setting up a raw dataset,
+exploring it for quality issues, cleaning it, and writing SQL queries to
+answer real pricing, stock, and revenue questions.
 
-**Columns:** `category`, `name`, `mrp`, `discountPercent`, `availableQuantity`,
-`discountedSellingPrice`, `weightInGms`, `outOfStock`, `quantity`
+## 📌 Project Overview
 
-## Tools Used
-PostgreSQL, SQL
+The goal was to work through this dataset the way an analyst would on the
+job:
 
-## Data Cleaning
-- Verified no null values across any column.
-- Found and removed 1 row with `mrp = 0` (invalid product entry).
-- Converted `mrp` and `discountedSellingPrice` from paise to rupees
-  (raw values were stored ×100).
+- ✅ Set up the raw inventory dataset in a SQL table
+- ✅ Explore the data for structure, nulls, and inconsistencies
+- ✅ Clean the data — remove invalid rows, fix unit formatting
+- ✅ Write business-driven SQL queries covering pricing, discounting, stock
+  availability, and revenue
 
-## Data Quality Note
-While exploring category-level aggregates, every product in the dataset
-turned out to be **duplicated under a second category label** with otherwise
-identical data (same name, price, stock, weight) — for example, every
-"Munchies" row has an exact duplicate under "Cooking Essentials," every
-"Packaged Food" row is duplicated under "Ice Cream & Desserts" and
-"Chocolates & Candies," and "Personal Care" duplicates "Paan Corner."
-This roughly halves the true number of unique products (~1,866 rather than
-3,731) and means any category-level SUM (like revenue or total weight) is
-double-counted for these paired categories. Worth flagging to anyone
-using this dataset for downstream analysis.
+## 📁 Dataset Overview
 
-## Key Findings
+Sourced from Kaggle: [Zepto Inventory Dataset](https://www.kaggle.com/datasets/palvinder2006/zepto-inventory-dataset)
 
-**1. Fruits & Vegetables has the highest average discount (15.46%)**,
-more than 4 points ahead of the next category (Meats, Fish & Eggs at 11.03%).
-Most other categories average 6-8% discount.
+Each row represents a product SKU. 3,732 rows across 14 categories.
 
-**2. 453 of 3,732 SKUs (12.1%) are out of stock.**
-
-**3. Several premium products are out of stock despite high MRP** — e.g.
-Patanjali Cow's Ghee (₹565) and MamyPoko Pants Extra Large diapers (₹399)
-were both unavailable at the time of the data snapshot.
-
-**4. 39 products have MRP above ₹500 but less than 10% discount** — mostly
-cooking oils, ghee, and personal care items (hair color, shampoo), suggesting
-these categories see less aggressive discounting even at higher price points.
-
-**5. Best value-per-gram products are dominated by fresh produce and staples**
-— Onion, Potato, Beetroot, and Tata Salt/Aashirvaad Salt all rank in the top
-10 cheapest per gram, as expected for everyday household basics.
-
-**6. Most inventory (3,392 of 3,731 SKUs) falls in the "Low" weight tier**
-(under 1kg), with only 46 products classified as "Bulk" (5kg+).
-
-## Sample Query Results
-
-**Top 5 categories by average discount %:**
-| Category | Avg Discount |
+**Columns:**
+| Column | Description |
 |---|---|
-| Fruits & Vegetables | 15.46% |
-| Meats, Fish & Eggs | 11.03% |
-| Packaged Food | 8.32% |
-| Ice Cream & Desserts | 8.32% |
-| Chocolates & Candies | 8.32% |
+| `sku_id` | Unique identifier per row (added as primary key) |
+| `name` | Product name |
+| `category` | Product category (Fruits & Vegetables, Snacks, Beverages, etc.) |
+| `mrp` | Maximum Retail Price (converted from paise to ₹) |
+| `discountPercent` | Discount applied on MRP |
+| `discountedSellingPrice` | Final price after discount (converted to ₹) |
+| `availableQuantity` | Units available in inventory |
+| `weightInGms` | Product weight in grams |
+| `outOfStock` | Boolean flag for stock availability |
+| `quantity` | Units per package |
 
-**Products with high MRP but out of stock (MRP > ₹300):**
-| Product | MRP |
-|---|---|
-| Patanjali Cow's Ghee | ₹565 |
-| MamyPoko Pants Extra Large Diapers | ₹399 |
-| Aashirvaad Atta With Multigrains | ₹315 |
-| Everest Kashmiri Lal Chilli Powder | ₹310 |
+## 🔧 Project Workflow
 
-## Recommendations
-1. **De-duplicate paired categories** before running any revenue or weight
-   aggregation — as noted above, several categories are exact duplicates and
-   will double-count totals if not handled.
-2. **Investigate stock-outs on high-MRP staples** (ghee, atta, diapers) —
-   these are high-frequency repurchase items where availability gaps likely
-   cost more in lost sales than low-MRP impulse items.
-3. **Review discounting on premium personal care and cooking oil products**
-   — 39 SKUs over ₹500 carry under 10% discount, which may be intentional
-   margin protection but is worth confirming against category strategy.
-
-## Project Structure
+### 1. Table Creation
+```sql
+CREATE TABLE zepto (
+  sku_id SERIAL PRIMARY KEY,
+  category VARCHAR(120),
+  name VARCHAR(150) NOT NULL,
+  mrp NUMERIC(8,2),
+  discountPercent NUMERIC(5,2),
+  availableQuantity INTEGER,
+  discountedSellingPrice NUMERIC(8,2),
+  weightInGms INTEGER,
+  outOfStock BOOLEAN,
+  quantity INTEGER
+);
 ```
-zepto-inventory-analysis/
+
+### 2. 🔍 Data Exploration
+- Counted total records (3,732 rows)
+- Checked sample rows to understand structure
+- Checked for null values across all columns — **none found**
+- Listed all distinct product categories (14 total)
+- Compared in-stock vs. out-of-stock counts
+- Checked for product names appearing multiple times (multiple SKUs per
+  product — different sizes/discounts, as expected in a real catalog)
+
+### 3. 🧹 Data Cleaning
+- Found and removed 1 row with `mrp = 0` (invalid entry)
+- Converted `mrp` and `discountedSellingPrice` from paise to rupees
+
+### 4. ⚠️ Data Quality Finding
+While aggregating by category, discovered that every product in the dataset
+is **duplicated under a second category label** with otherwise identical
+data — e.g. every "Munchies" row has an exact duplicate under "Cooking
+Essentials," and "Personal Care" duplicates "Paan Corner." This roughly
+halves the true unique product count and means naive category-level SUMs
+(revenue, weight) double-count these pairs unless de-duplicated first.
+
+### 5. 📊 Business Insights
+- Top 10 best-value products by discount percentage
+- High-MRP products currently out of stock
+- Estimated revenue per category
+- Products with MRP > ₹500 but minimal discount (<10%)
+- Top 5 categories by average discount
+- Price-per-gram ranking to find best value-for-money items
+- Products grouped into Low / Medium / Bulk weight tiers
+- Total inventory weight per category
+
+## 🔑 Key Findings
+
+- **Fruits & Vegetables has the highest average discount (15.46%)** — more
+  than 4 points ahead of the next category, Meats, Fish & Eggs (11.03%).
+- **12.1% of SKUs (453 of 3,732) are out of stock**, including several
+  high-MRP staples like Patanjali Cow's Ghee (₹565) and MamyPoko Pants
+  Extra Large diapers (₹399).
+- **39 products priced above ₹500 carry under 10% discount** — mostly
+  cooking oils, ghee, and personal care items, suggesting these categories
+  see less aggressive promotion even at higher price points.
+- **Everyday staples dominate the best value-per-gram ranking** — Onion,
+  Potato, Beetroot, and salt brands all rank in the top 10.
+- **Most SKUs (3,392 of 3,731) fall in the "Low" weight tier** (under 1kg);
+  only 46 are classified "Bulk" (5kg+).
+
+## 📈 Visualization
+![Category discount and stock-out comparison](category_analysis.png)
+
+Left: average discount % by category. Right: out-of-stock rate % by category.
+
+## 💡 Recommendations
+1. De-duplicate paired categories before running any revenue or weight
+   aggregation, since several categories are exact duplicates of each other.
+2. Investigate stock-outs on high-MRP, high-frequency staples (ghee, atta,
+   diapers) — availability gaps here likely cost more in lost sales than
+   low-MRP impulse items.
+3. Review discounting strategy on premium personal care and cooking oil
+   products, where discount levels are notably lower than other categories.
+
+## 🛠️ How to Use This Project
+```bash
+git clone https://github.com/animeshyadav03/Zepto-SQL-data-analysis.git
+cd Zepto-SQL-data-analysis
+```
+1. Open `queries.sql` — contains table creation, data exploration, cleaning,
+   and business analysis queries in order.
+2. Load `zepto_v2.csv` into a PostgreSQL database (via pgAdmin import or
+   `\copy`).
+3. Run `queries.sql` against the loaded table to reproduce the analysis.
+
+## 📁 Project Structure
+```
+Zepto-SQL-data-analysis/
 │
-├── data/
-│   └── zepto_v2.csv
-├── sql/
-│   └── queries.sql
+├── zepto_v2.csv
+├── queries.sql
 ├── category_analysis.png
 ├── README.md
+├── LICENSE
 ```
+
+## 📜 License
+MIT — feel free to fork, star, or reference for your own learning.
